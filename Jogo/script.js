@@ -1,263 +1,137 @@
-// Variáveis do jogo
-let cobra = [{x: 10, y: 10}];
-let comida = null; // Inicializada como null
-let comidaEspecial = null;
-let direcao = 'DIREITA';
-let proximaDirecao = 'DIREITA';
-let velocidade = 150;
-let pontos = 0;
-let recorde = localStorage.getItem('recorde') || 0;
-let intervalo;
-let pausado = false;
-let fimDeJogo = false;
-let timerComidaEspecial = null;
+// Sons e música
+const somComida = new Audio('https://freesound.org/data/previews/256/256113_3263906-lq.mp3');
+const somEspecial = new Audio('https://freesound.org/data/previews/198/198841_285997-lq.mp3');
+const somFim = new Audio('https://freesound.org/data/previews/331/331912_3248244-lq.mp3');
+const musicaFundo = new Audio('https://freesound.org/data/previews/556/556258_7037-lq.mp3');
+musicaFundo.loop = true;
 
-// Elementos DOM
-const iniciarBtn = document.getElementById('iniciarBtn');
-const pausarBtn = document.getElementById('pausarBtn');
-const reiniciarBtn = document.getElementById('reiniciarBtn');
-const gameOverElement = document.getElementById('gameOver');
-const pontosElement = document.getElementById('score');
-const recordeElement = document.getElementById('highScore');
-const pontosFinaisElement = document.getElementById('finalScore');
+// Variáveis
+let cobra=[{x:10,y:10}], comida=null, comidaEspecial=null, direcao='DIREITA', proximaDirecao='DIREITA';
+let velocidade=150, pontos=0, recorde=localStorage.getItem('recorde')||0, intervalo, pausado=false, fimDeJogo=false, timerComidaEspecial=null;
 
-// Inicializa o jogo
-function iniciar() {
-    recordeElement.textContent = recorde;
-    
+// DOM
+const iniciarBtn=document.getElementById('iniciarBtn');
+const pausarBtn=document.getElementById('pausarBtn');
+const reiniciarBtn=document.getElementById('reiniciarBtn');
+const gameOverElement=document.getElementById('gameOver');
+const pontosElement=document.getElementById('score');
+const recordeElement=document.getElementById('highScore');
+const pontosFinaisElement=document.getElementById('finalScore');
+
+// Inicializa
+function iniciar(){
+    recordeElement.textContent=recorde;
     iniciarBtn.addEventListener('click', iniciarJogo);
     pausarBtn.addEventListener('click', alternarPausa);
     reiniciarBtn.addEventListener('click', reiniciarJogo);
 }
 
-// Inicia o jogo
-function iniciarJogo() {
-    if (intervalo) {
-        clearInterval(intervalo);
-    }
-    
-    // Reinicia estado do jogo
-    cobra = [{x: 10, y: 10}];
-    direcao = 'DIREITA';
-    proximaDirecao = 'DIREITA';
-    pontos = 0;
-    pontosElement.textContent = pontos;
-    fimDeJogo = false;
-    pausado = false;
-    gameOverElement.style.display = 'none';
-    
-    comida = gerarComida(); // Agora comida é inicializada aqui
-    if (comidaEspecial) {
-        clearTimeout(timerComidaEspecial);
-        comidaEspecial = null;
-    }
-    
-    iniciarBtn.disabled = true;
-    pausarBtn.disabled = false;
-    
-    intervalo = setInterval(loopJogo, velocidade);
+// Iniciar jogo
+function iniciarJogo(){
+    musicaFundo.play();
+    if(intervalo) clearInterval(intervalo);
+    cobra=[{x:10,y:10}]; direcao='DIREITA'; proximaDirecao='DIREITA';
+    pontos=0; pontosElement.textContent=pontos; fimDeJogo=false; pausado=false; velocidade=150;
+    gameOverElement.style.display='none';
+    comida=gerarComida();
+    if(comidaEspecial) clearTimeout(timerComidaEspecial), comidaEspecial=null;
+    iniciarBtn.disabled=true; pausarBtn.disabled=false;
+    intervalo=setInterval(loopJogo, velocidade);
 }
 
-// Loop principal do jogo
-function loopJogo() {
-    if (pausado || fimDeJogo) return;
-    
-    direcao = proximaDirecao;
+// Loop
+function loopJogo(){
+    if(pausado||fimDeJogo) return;
+    direcao=proximaDirecao;
     moverCobra();
     criarTabuleiro();
 }
 
-// Cria o tabuleiro
-function criarTabuleiro() {
-    const tabuleiro = document.getElementById('gameBoard');
-    tabuleiro.innerHTML = '';
-    
-    // Desenha a cobra
-    cobra.forEach((segmento, index) => {
-        const elemento = document.createElement('div');
-        elemento.style.gridRowStart = segmento.y;
-        elemento.style.gridColumnStart = segmento.x;
-        elemento.classList.add(index === 0 ? 'snake-head' : 'snake');
-        tabuleiro.appendChild(elemento);
+// Criar tabuleiro
+function criarTabuleiro(){
+    const tabuleiro=document.getElementById('gameBoard'); tabuleiro.innerHTML='';
+    cobra.forEach((seg,idx)=>{
+        const div=document.createElement('div');
+        div.style.gridRowStart=seg.y; div.style.gridColumnStart=seg.x;
+        div.classList.add(idx===0?'snake-head':'snake');
+        tabuleiro.appendChild(div);
     });
-    
-    // Desenha a comida (se existir)
-    if (comida) {
-        const elementoComida = document.createElement('div');
-        elementoComida.style.gridRowStart = comida.y;
-        elementoComida.style.gridColumnStart = comida.x;
-        elementoComida.classList.add('food');
-        tabuleiro.appendChild(elementoComida);
-    }
-    
-    // Desenha comida especial se existir
-    if (comidaEspecial) {
-        const elementoEspecial = document.createElement('div');
-        elementoEspecial.style.gridRowStart = comidaEspecial.y;
-        elementoEspecial.style.gridColumnStart = comidaEspecial.x;
-        elementoEspecial.classList.add('special-food');
-        tabuleiro.appendChild(elementoEspecial);
-    }
+    if(comida){ const f=document.createElement('div'); f.style.gridRowStart=comida.y; f.style.gridColumnStart=comida.x; f.classList.add('food'); tabuleiro.appendChild(f);}
+    if(comidaEspecial){ const s=document.createElement('div'); s.style.gridRowStart=comidaEspecial.y; s.style.gridColumnStart=comidaEspecial.x; s.classList.add('special-food'); tabuleiro.appendChild(s);}
 }
 
-// Gera comida aleatória
-function gerarComida() {
-    let novaComida;
-    while (!novaComida || posicaoOcupada(novaComida)) {
-        novaComida = {
-            x: Math.floor(Math.random() * 20) + 1,
-            y: Math.floor(Math.random() * 20) + 1
-        };
-    }
-    
-    // 20% de chance de aparecer comida especial
-    if (Math.random() < 0.2 && !comidaEspecial) {
-        gerarComidaEspecial();
-    }
-    
-    return novaComida;
+// Gerar comida
+function gerarComida(){
+    let nova;
+    while(!nova||posicaoOcupada(nova)){ nova={x:Math.floor(Math.random()*20)+1, y:Math.floor(Math.random()*20)+1}; }
+    if(Math.random()<0.2&&!comidaEspecial) gerarComidaEspecial();
+    return nova;
 }
 
-// Gera comida especial que desaparece depois de 5 segundos
-function gerarComidaEspecial() {
-    let novaComida;
-    while (!novaComida || posicaoOcupada(novaComida)) {
-        novaComida = {
-            x: Math.floor(Math.random() * 20) + 1,
-            y: Math.floor(Math.random() * 20) + 1
-        };
-    }
-    
-    comidaEspecial = novaComida;
-    
-    timerComidaEspecial = setTimeout(() => {
-        comidaEspecial = null;
-        criarTabuleiro();
-    }, 5000);
+// Comida especial
+function gerarComidaEspecial(){
+    let nova;
+    while(!nova||posicaoOcupada(nova)){ nova={x:Math.floor(Math.random()*20)+1, y:Math.floor(Math.random()*20)+1}; }
+    comidaEspecial=nova;
+    timerComidaEspecial=setTimeout(()=>{ comidaEspecial=null; criarTabuleiro(); },5000);
 }
 
-// Verifica se posição está ocupada
-function posicaoOcupada(posicao) {
-    // Verifica se está ocupada pela cobra
-    const ocupadaPelaCobra = cobra.some(segmento => 
-        segmento.x === posicao.x && segmento.y === posicao.y
-    );
-    
-    // Verifica se está ocupada pela comida (se existir)
-    const ocupadaPelaComida = comida ? 
-        (posicao.x === comida.x && posicao.y === comida.y) : false;
-    
-    // Verifica se está ocupada pela comida especial (se existir)
-    const ocupadaPelaEspecial = comidaEspecial ?
-        (posicao.x === comidaEspecial.x && posicao.y === comidaEspecial.y) : false;
-    
-    return ocupadaPelaCobra || ocupadaPelaComida || ocupadaPelaEspecial;
+// Checar posição
+function posicaoOcupada(pos){
+    return cobra.some(s=>s.x===pos.x&&s.y===pos.y)||(comida?pos.x===comida.x&&pos.y===comida.y:false)||(comidaEspecial?pos.x===comidaEspecial.x&&pos.y===comidaEspecial.y:false);
 }
 
-// Muda a direção
-function mudarDirecao(evento) {
-    const tecla = evento.key;
-    if (tecla === 'ArrowUp' && direcao !== 'BAIXO') proximaDirecao = 'CIMA';
-    else if (tecla === 'ArrowDown' && direcao !== 'CIMA') proximaDirecao = 'BAIXO';
-    else if (tecla === 'ArrowLeft' && direcao !== 'DIREITA') proximaDirecao = 'ESQUERDA';
-    else if (tecla === 'ArrowRight' && direcao !== 'ESQUERDA') proximaDirecao = 'DIREITA';
-    else if (tecla === ' ') alternarPausa(); // Espaço pausa
+// Direção
+function mudarDirecao(e){
+    const t=e.key;
+    if(t==='ArrowUp'&&direcao!=='BAIXO') proximaDirecao='CIMA';
+    else if(t==='ArrowDown'&&direcao!=='CIMA') proximaDirecao='BAIXO';
+    else if(t==='ArrowLeft'&&direcao!=='DIREITA') proximaDirecao='ESQUERDA';
+    else if(t==='ArrowRight'&&direcao!=='ESQUERDA') proximaDirecao='DIREITA';
+    else if(t===' ') alternarPausa();
 }
 
-// Move a cobra
-function moverCobra() {
-    const cabeca = {...cobra[0]};
-    
-    // Move a cabeça
-    switch (direcao) {
-        case 'CIMA': cabeca.y--; break;
-        case 'BAIXO': cabeca.y++; break;
-        case 'ESQUERDA': cabeca.x--; break;
-        case 'DIREITA': cabeca.x++; break;
+// Mover
+function moverCobra(){
+    const cabeca={...cobra[0]};
+    switch(direcao){
+        case'CIMA': cabeca.y--; break;
+        case'BAIXO': cabeca.y++; break;
+        case'ESQUERDA': cabeca.x--; break;
+        case'DIREITA': cabeca.x++; break;
     }
-    
-    // Verifica colisões
-    if (verificarColisao(cabeca)) {
-        fimDeJogoFuncao();
-        return;
-    }
-    
-    // Adiciona nova cabeça
+    if(verificarColisao(cabeca)){ fimDeJogoFuncao(); return; }
     cobra.unshift(cabeca);
-    
-    // Verifica se comeu comida normal
-    if (comida && cabeca.x === comida.x && cabeca.y === comida.y) {
-        pontos += 10;
-        atualizarPontos();
-        comida = gerarComida();
-    } 
-    // Verifica se comeu comida especial
-    else if (comidaEspecial && cabeca.x === comidaEspecial.x && cabeca.y === comidaEspecial.y) {
-        pontos += 30;
-        atualizarPontos();
-        clearTimeout(timerComidaEspecial);
-        comidaEspecial = null;
-    } else {
-        // Remove a cauda se não comeu
-        cobra.pop();
-    }
+    if(comida&&cabeca.x===comida.x&&cabeca.y===comida.y){ pontos+=10; atualizarPontos(); somComida.play(); comida=gerarComida(); }
+    else if(comidaEspecial&&cabeca.x===comidaEspecial.x&&cabeca.y===comidaEspecial.y){ pontos+=30; atualizarPontos(); somEspecial.play(); clearTimeout(timerComidaEspecial); comidaEspecial=null; }
+    else{ cobra.pop(); }
 }
 
-// Atualiza a exibição dos pontos
-function atualizarPontos() {
-    pontosElement.textContent = pontos;
-}
+// Atualizar pontos
+function atualizarPontos(){ pontosElement.textContent=pontos; }
 
-// Verifica colisões
-function verificarColisao(cabeca) {
-    // Colisão com as paredes
-    if (cabeca.x < 1 || cabeca.x > 20 || cabeca.y < 1 || cabeca.y > 20) {
-        return true;
-    }
-    
-    // Colisão com o próprio corpo (ignora a cabeça)
-    for (let i = 1; i < cobra.length; i++) {
-        if (cabeca.x === cobra[i].x && cabeca.y === cobra[i].y) {
-            return true;
-        }
-    }
-    
+// Colisão
+function verificarColisao(cabeca){
+    if(cabeca.x<1||cabeca.x>20||cabeca.y<1||cabeca.y>20) return true;
+    for(let i=1;i<cobra.length;i++){ if(cabeca.x===cobra[i].x&&cabeca.y===cobra[i].y) return true; }
     return false;
 }
 
 // Fim de jogo
-function fimDeJogoFuncao() {
-    clearInterval(intervalo);
-    fimDeJogo = true;
-    
-    // Atualiza recorde
-    if (pontos > recorde) {
-        recorde = pontos;
-        localStorage.setItem('recorde', recorde);
-        recordeElement.textContent = recorde;
-    }
-    
-    // Mostra tela de fim de jogo
-    pontosFinaisElement.textContent = pontos;
-    gameOverElement.style.display = 'block';
-    iniciarBtn.disabled = false;
-    pausarBtn.disabled = true;
+function fimDeJogoFuncao(){
+    clearInterval(intervalo); fimDeJogo=true; somFim.play();
+    if(pontos>recorde){ recorde=pontos; localStorage.setItem('recorde',recorde); recordeElement.textContent=recorde; }
+    pontosFinaisElement.textContent=pontos; gameOverElement.style.display='block';
+    iniciarBtn.disabled=false; pausarBtn.disabled=true;
+    musicaFundo.pause();
 }
 
-// Alterna entre pausado e em jogo
-function alternarPausa() {
-    pausado = !pausado;
-    pausarBtn.textContent = pausado ? 'Continuar' : 'Pausar';
-}
+// Pausa
+function alternarPausa(){ pausado=!pausado; pausarBtn.textContent=pausado?'Continuar':'Pausar'; }
 
-// Reinicia o jogo
-function reiniciarJogo() {
-    gameOverElement.style.display = 'none';
-    iniciarJogo();
-}
+// Reiniciar
+function reiniciarJogo(){ gameOverElement.style.display='none'; iniciarJogo(); }
 
-// Event listeners
+// Eventos
 document.addEventListener('keydown', mudarDirecao);
-
-// Inicia o jogo
 iniciar();
